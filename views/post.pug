@@ -18,11 +18,17 @@ block content
                                     span.tag.badge.badge-pill.badge-primary.mr-2.mb-2= tag.name
                     div.card-footer
                         if post.attachments && post.attachments.length > 0
-                            h3 Images
                             div
-                                each attachment in post.attachments
-                                    a(href=attachment.uri target="_blank" rel="noopener noreferrer")
-                                        img.img-thumbnail(src=attachment.uri alt="Attachment" style="width: 150px; height: auto; margin-right: 10px; margin-bottom: 10px;")
+                                h3 Images
+                                div
+                                    each attachment in post.attachments
+                                        a(href=attachment.uri target="_blank" rel="noopener noreferrer")
+                                            img.img-thumbnail(src=attachment.uri alt="Attachment" style="width: 150px; height: auto; margin-right: 10px; margin-bottom: 10px;")
+                        if user && user.userId == post.author._id
+                            div
+                                button.btn.btn-warning.edit-post-btn(data-bs-toggle="modal", data-bs-target="#editPostModal") Edit
+                                button.btn.btn-danger(type="button", data-bs-toggle="modal", data-bs-target="#deletePostModal") Delete Post
+
                 div.card.mt-4
                     div.card-header.d-flex.justify-content-between
                         h2 Comments
@@ -84,5 +90,48 @@ block content
                 div.modal-footer
                     button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
                     button.btn.btn-danger#deleteCommentBtn Delete
+
+    div#editPostModal.modal.fade(tabindex="-1", aria-labelledby="editPostModalLabel", aria-hidden="true")
+        .modal-dialog
+            .modal-content
+                form(action=`/posts/${post._id}`, method="post", enctype="multipart/form-data")
+                    .modal-header
+                        h5.modal-title#editPostModalLabel Edit Post
+                        button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+                    .modal-body
+                        .mb-3
+                            label(for="editPostTitle") Title
+                            input#editPostTitle.form-control(type="text", name="title", value=post.title, required)
+                        .mb-3
+                            label(for="editPostContent") Content
+                            textarea#editPostContent.form-control(name="content", rows="5", required)= post.content
+                        .mb-3
+                            label(for="editPostImages") Attachments
+                            input#editPostImages.form-control(type="file", name="images", multiple)
+                        .mb-3
+                            p Current attachments (Select images that you want to delete)
+                            each attachment, index in post.attachments
+                                .form-check.form-check-inline
+                                    input.form-check-input(type="checkbox", name="deleteImages", value=index, id=`deleteImage-${index}`)
+                                    label.form-check-label(for=`deleteImage-${index}`)
+                                        img(src=attachment.uri, alt=attachment.blobName, width="100", class="img-thumbnail")
+
+                    .modal-footer
+                        button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+                        button.btn.btn-primary(type="submit") Save Changes
+
+    div.modal.fade(tabindex="-1", id="deletePostModal", aria-labelledby="deletePostModalLabel", aria-hidden="true")
+        div.modal-dialog
+            div.modal-content
+                div.modal-header
+                    h5.modal-title(id="deletePostModalLabel") Delete Post
+                    button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+                div.modal-body
+                    p Are you sure you want to delete this post?
+                div.modal-footer
+                    button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+                    form(action=`/posts/${post._id}/delete`, method="POST", id="deletePostForm")
+                        input(type="hidden", name="_method", value="DELETE")
+                        button.btn.btn-danger(type="submit") Delete
 
     script(src="/javascripts/post_comments.js")

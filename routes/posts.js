@@ -38,6 +38,11 @@ router.delete('/:postId/comments/:commentId', async (req, res) => {
 
 
         await Comment.findByIdAndDelete(commentId);
+
+        const postToUpdate = await Post.findById(req.params.postId);
+        postToUpdate.comments = postToUpdate.comments.filter(x => x != commentId);
+        await postToUpdate.save();
+
         res.sendStatus(204);
     } catch (err) {
         console.error(err);
@@ -162,12 +167,115 @@ router.get('/:postId', ensureAuthenticated, async function(req, res, next) {
     }
 });
 
+router.post('/:postId/delete', ensureAuthenticated, async (req, res) => {
+    const postId = req.params.postId;
+
+    try {
+        const post = await Post.findById(postId)
+            .populate('attachments')
+            .populate({ path: 'comments', populate: { path: 'attachments' } });
+
+        // Удаление вложений поста из Azure Blob Storage и базы данных
+        const containerClient = blobServiceClient.getContainerClient('attachments');
+        for (const attachment of post.attachments) {
+            const blobClient = containerClient.getBlobClient(attachment.blobName);
+            await blobClient.deleteIfExists();
+            await PostAttachment.findByIdAndDelete(attachment._id);
+        }
+
+        // Удаление комментариев и их вложений
+        for (const comment of post.comments) {
+            // Удаление вложений комментария из Azure Blob Storage и базы данных
+            for (const attachment of comment.attachments) {
+                const blobClient = containerClient.getBlobClient(attachment.blobName);
+                await blobClient.deleteIfExists();
+                await CommentAttachment.findByIdAndDelete(attachment._id);
+            }
+            // Удаление комментария
+            await Comment.findByIdAndDelete(comment._id);
+        }
+
+        // Удаление поста
+        await Post.findByIdAndDelete(postId);
+
+        res.redirect('/posts');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
+});
+
+router.post('/:postId', ensureAuthenticated, upload.array('images', 5), async (req, res) => {
+    const postId = req.params.postId;
+    const title = req.body.title;
+    const content = req.body.content;
+    const deleteImages = req.body.deleteImages;
+
+    try {
+        // Обновление поста
+        const post = await Post.findById(postId);
+        post.title = title;
+        post.content = content;
+
+        // Удаление выбранных изображений
+        if (deleteImages) {
+            const deleteIndices = Array.isArray(deleteImages) ? deleteImages : [deleteImages];
+            const deleteAttachments = deleteIndices.map(index => post.attachments[index]);
+
+            // Удаление изображений из Azure Blob Storage
+            const containerClient = blobServiceClient.getContainerClient('attachments');
+            const attachmentsToDelete = await PostAttachment.find({_id: {$in: deleteAttachments}}).exec();
+            for (const attachment of attachmentsToDelete) {
+                const blobClient = containerClient.getBlobClient(attachment.blobName);
+                await blobClient.deleteIfExists();
+            }
+
+            // Удаление вложений из базы данных
+            await PostAttachment.deleteMany({ _id: { $in: deleteAttachments.map(attachment => attachment._id) } });
+
+            // Удаление ссылок на вложения из поста
+            post.attachments = post.attachments.filter(attachment => !deleteAttachments.includes(attachment));
+        }
+        await post.save();
+
+        // Добавление новых вложений
+
+        const postAttachments = req.files.map(file => ({
+            blobName: file.blobName,
+            uri: file.url,
+            post: post._id
+        }));
+
+        await PostAttachment.insertMany(postAttachments);
+
+        const updatedPost = await Post.findById(post._id);
+        const fileNames = postAttachments.map(x => x.blobName);
+        const createdAttachments = await PostAttachment.find({blobName: {$in: fileNames}}).exec();
+        const attachmentsIds = createdAttachments.map(x => x._id);
+        updatedPost.attachments = updatedPost.attachments.concat(attachmentsIds);
+        await updatedPost.save();
+
+        res.redirect(`/posts/${postId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
+});
+
 router.get('/', ensureAuthenticated, async function(req, res, next) {
     try {
         const page = req.query.page ? parseInt(req.query.page) : 1;
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
         const titleSearch = req.query.title || '';
         const tagSearch = req.query.tag || '';
+        const sort = req.query.sort || '';
+        const selectedSortOrder = req.query.sortOrder || '';
+
+        const sortOptions = {
+            'createdAt': { 'createdAt': selectedSortOrder === 'asc' ? 1 : -1 },
+            'updatedAt': { 'updatedAt': selectedSortOrder === 'asc' ? 1 : -1 },
+        };
+        const selectedSort = sortOptions[sort] || sortOptions['updatedAt'];
 
         const query = { title: { $regex: titleSearch, $options: 'i' } };
         if (tagSearch) {
@@ -180,8 +288,9 @@ router.get('/', ensureAuthenticated, async function(req, res, next) {
         }
 
         const posts = await Post.find(query)
+            .populate('author')
             .populate('tags')
-            .sort({ createdAt: -1 })
+            .sort(selectedSort)
             .skip((page - 1) * limit)
             .limit(limit)
             .exec();

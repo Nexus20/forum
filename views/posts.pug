@@ -12,12 +12,25 @@ block content
                         label.form-label(for='tag') Search by tag
                         input#tag.form-control(type='text', name='tag', value=tagSearch)
                     div.mb-3
+                        label.form-label(for='sort') Sort by &nbsp;
+                        select#sort.form-control.form-control-sm.w-auto.d-inline-block.ml-1(name='sort')
+                            option(value='createdAt', selected=sort === 'createdAt') Creation date
+                            option(value='updatedAt', selected=sort === 'updatedAt' || !sort) Update date
+                    div.mb-3
+                        label.form-label(for='sortOrder') Order &nbsp;
+                        select#sortOrder.form-control.form-control-sm.w-auto.d-inline-block.ml-1(name='sortOrder')
+                            option(value='asc', selected=sortOrder === 'asc') Ascending
+                            option(value='desc', selected=sortOrder === 'desc' || !sortOrder) Descending
+
+                    div.mb-3
                         button.btn.btn-primary(type='submit') Search
                         a.btn.btn-secondary(href='/posts') Reset
             div.col-9
                 each post in posts
                     .card.mb-4
-                        .card-header= post.title
+                        .card-header
+                            h5= post.title
+                            small.text-muted Posted by #{post.author.username} on #{new Date(post.createdAt).toLocaleDateString()}
                         .card-body
                             p.card-text= post.content
                             if post.tags && post.tags.length > 0
@@ -25,6 +38,9 @@ block content
                                 each tag in post.tags
                                     span.badge.badge-pill.badge-primary.ml-1.tag= tag.name
                         .card-footer
+                            p.mb-1
+                                span.text-muted #{post.comments.length} #{post.comments.length === 1 ? 'Comment' : 'Comments'}
+                                | &middot; Updated at #{new Date(post.updatedAt).toLocaleDateString()}
                             a.btn.btn-primary(href=`/posts/${post._id}`) Read more
 
                 nav
