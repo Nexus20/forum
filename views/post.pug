@@ -1,0 +1,88 @@
+extends layout
+
+block content
+    div.container
+        div.row
+            div.col-12
+                div.card
+                    div.card-header
+                        h1= post.title
+                        h6.mb-2.text-muted Posted by #{post.author.username} on #{new Date(post.createdAt).toLocaleDateString()}
+                    div.card-body
+                        p= post.content
+
+                        if post.tags && post.tags.length > 0
+                            h3 Tags
+                            div
+                                each tag in post.tags
+                                    span.tag.badge.badge-pill.badge-primary.mr-2.mb-2= tag.name
+                    div.card-footer
+                        if post.attachments && post.attachments.length > 0
+                            h3 Images
+                            div
+                                each attachment in post.attachments
+                                    a(href=attachment.uri target="_blank" rel="noopener noreferrer")
+                                        img.img-thumbnail(src=attachment.uri alt="Attachment" style="width: 150px; height: auto; margin-right: 10px; margin-bottom: 10px;")
+                div.card.mt-4
+                    div.card-header.d-flex.justify-content-between
+                        h2 Comments
+                        button.btn.btn-primary(type='button' data-bs-toggle='collapse' data-bs-target='#commentForm') Add Comment
+                    div.card-body
+                        div.collapse(id='commentForm')
+                            form(method='POST' action=`/posts/${post._id}/comments` enctype="multipart/form-data")
+                                div.mb-3
+                                    label.form-label(for='commentContent') Your Comment
+                                    textarea.form-control(name='content' id='commentContent' rows='3' required)
+                                div.mb-3
+                                    label.form-label(for='images') Images
+                                    input#images(type='file', name='images', multiple)
+                                button.btn.btn-primary(type='submit') Submit Comment
+                        if post.comments && post.comments.length > 0
+                            ul.list-unstyled.mt-3
+                                each comment in post.comments
+                                    li.mb-3
+                                        div.alert.alert-secondary(id=`comment-${comment._id}`)
+                                            p.mb-1(id=`comment-text-${comment._id}`)= comment.content
+                                            if comment.attachments && comment.attachments.length > 0
+                                                div
+                                                    each attachment in comment.attachments
+                                                        a(href=attachment.uri target="_blank" rel="noopener noreferrer")
+                                                            img.img-thumbnail(src=attachment.uri alt="Attachment" style="width: 100px; height: auto; margin-right: 5px; margin-bottom: 5px;")
+                                            small.text-muted= comment.author.username
+                                            br
+                                            small.text-muted= new Date(post.createdAt).toLocaleDateString()
+                                            br
+                                            small.text-muted Updated at #{new Date(post.createdAt).toLocaleDateString()}
+                                            if user && user.userId == comment.author._id
+                                                div
+                                                    button.btn.btn-sm.btn-warning.edit-comment-btn(data-bs-toggle="modal", data-bs-target="#editCommentModal", data-comment-id=comment._id) Edit
+                                                    button.btn.btn-sm.btn-danger.delete-comment-btn(data-bs-toggle="modal", data-bs-target="#deleteCommentModal", data-comment-id=comment._id) Delete
+
+    //- Edit comment modal
+    div.modal.fade(tabindex="-1", id="editCommentModal")
+        div.modal-dialog
+            div.modal-content
+                form#editCommentForm
+                    div.modal-header
+                        h5.modal-title Edit Comment
+                        button.btn-close(type="button", data-bs-dismiss="modal")
+                    div.modal-body
+                        textarea.form-control#editCommentTextarea(rows="3")
+                    div.modal-footer
+                        button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+                        button.btn.btn-primary(type="submit") Save Changes
+
+    //- Delete comment modal
+    div.modal.fade(tabindex="-1", id="deleteCommentModal")
+        div.modal-dialog
+            div.modal-content
+                div.modal-header
+                    h5.modal-title Delete Comment
+                    button.btn-close(type="button", data-bs-dismiss="modal")
+                div.modal-body
+                    p Are you sure you want to delete this comment?
+                div.modal-footer
+                    button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+                    button.btn.btn-danger#deleteCommentBtn Delete
+
+    script(src="/javascripts/post_comments.js")

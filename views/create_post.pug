@@ -1,0 +1,27 @@
+extends layout
+
+block content
+    div.container
+        div.row
+            div.col-12
+                h1 Create post
+                form(method='POST', action='/posts/new' enctype="multipart/form-data")
+                    div.mb-3
+                        label.form-label(for='title') Title
+                        input#title.form-control(type='text', name='title', required)
+                    div.mb-3
+                        label.form-label(for='content') Content
+                        textarea#content.form-control(name='content', rows='5', required)
+                    div.mb-3
+                        label.form-label(for='images') Images
+                        input#images(type='file', name='images', multiple)
+                    div.mb-3
+                        label.form-label(for='tagSearch') Search Tags
+                        input#tagSearch.form-control(type='text', placeholder='Search tags...')
+                        div#searchResults.mt-2
+                        div#selectedTags.mt-2
+                        input#tags(type='hidden', name='tags')
+                        ul(id="selected-tags", class="list-inline")
+                    button.btn.btn-primary(type='submit') Submit
+
+    script(src="/javascripts/create_post.js")

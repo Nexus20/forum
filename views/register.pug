@@ -1,0 +1,21 @@
+extends layout
+
+block content
+    div.container
+        div.row
+            div.col-12
+                h1 Register
+                form(method="post" action="/register")
+                    div.mb-3
+                        label.form-label(for="username") Username
+                        input.form-control(type="text" id="username" name="username" required)
+                    div.mb-3
+                        label.form-label(for="email") Email
+                        input.form-control(type="email" id="email" name="email" required)
+                    div.mb-3
+                        label.form-label(for="password") Password
+                        input.form-control(type="password" id="password" name="password" required)
+                    div.mb-3
+                        label.form-label(for="passwordConfirm") Confirm Password
+                        input.form-control(type="password" id="passwordConfirm" name="passwordConfirm" required)
+                    button.btn.btn-primary(type="submit") Register
