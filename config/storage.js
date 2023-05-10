@@ -2,9 +2,10 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const multer = require('multer')
 const MulterAzureStorage = require('multer-azure-blob-storage').MulterAzureStorage;
 
-const connectionString = `DefaultEndpointsProtocol=https;AccountName=appstore2508;AccountKey=wP7USEVVDC/wc2jlXsKzlqW3y49/vM38jzrdlGqvBNpzst+gABXGk/68IxJXZ2Rjqzv4sMksK3de+ASt6EYlMg==;EndpointSuffix=core.windows.net`;
+const dotenv = require('dotenv');
+dotenv.config();
 
-const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING);
 
 const resolveBlobName = (req, file) => {
     return new Promise((resolve, reject) => {
@@ -14,10 +15,10 @@ const resolveBlobName = (req, file) => {
 };
 
 const azureStorage = new MulterAzureStorage({
-    connectionString: connectionString,
-    accessKey: 'wP7USEVVDC/wc2jlXsKzlqW3y49/vM38jzrdlGqvBNpzst+gABXGk/68IxJXZ2Rjqzv4sMksK3de+ASt6EYlMg==',
-    accountName: 'appstore2508',
-    containerName: 'attachments',
+    connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
+    accessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
+    accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
+    containerName: process.env.AZURE_STORAGE_CONTAINER_NAME,
     blobName: resolveBlobName,
     containerAccessLevel: 'blob',
 });
